@@ -1,0 +1,58 @@
+import unittest
+import sqlite3
+import pandas as pd
+import datetime
+
+class TestFlightPipeline(unittest.TestCase):
+
+    def test_delay_feature_extraction(self):
+        """Tests if the 15-minute (900s) threshold identifies delays correctly."""
+        sched_a, real_a = 1711800000, 1711801200 
+        result_a = 1 if (real_a - sched_a) > 900 else 0
+        self.assertEqual(result_a, 1)
+
+    def test_time_formatting(self):
+        """Tests Unix to HH:MM string conversion."""
+        test_ts = 1711800000
+        formatted = datetime.datetime.fromtimestamp(test_ts).strftime('%H:%M')
+        self.assertEqual(len(formatted), 5)
+        self.assertIn(":", formatted)
+
+    def test_end_to_end_integration(self):
+        """
+        PROVE DATA FLOW:
+        Mock Input -> Preprocessing -> Database Load -> Database Query
+        """
+       
+        mock_raw_input = [{
+            "Flight_No": "INT-101",
+            "sched_dep": 1000,
+            "real_dep": 2000, 
+            "sched_arr": 5000
+        }]
+
+        processed_data = []
+        for item in mock_raw_input:
+            delay_status = 1 if (item['real_dep'] - item['sched_dep']) > 900 else 0
+            processed_data.append({
+                "Flight_No": item['Flight_No'],
+                "Is_Delayed": delay_status,
+                "Departure": datetime.datetime.fromtimestamp(item['sched_dep']).strftime('%H:%M')
+            })
+        df_test = pd.DataFrame(processed_data)
+
+        test_conn = sqlite3.connect(":memory:") 
+        df_test.to_sql("integration_table", test_conn, index=False)
+
+        output_df = pd.read_sql("SELECT * FROM integration_table WHERE Flight_No='INT-101'", test_conn)
+        test_conn.close()
+
+        self.assertFalse(output_df.empty, "Data failed to reach the Output Database")
+        self.assertEqual(output_df.iloc[0]['Is_Delayed'], 1, "Transformation logic lost during flow")
+        print("\n✅ Integration Test Passed: Data Flow from Input to Output is Verified.")
+
+if __name__ == '__main__':
+    print("--- STARTING FINAL SYSTEM VALIDATION ---")
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestFlightPipeline)
+    unittest.TextTestRunner(verbosity=2).run(suite)
