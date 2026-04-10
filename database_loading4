@@ -1,0 +1,21 @@
+# DATABASE LOADING 
+conn = sqlite3.connect("flight_project.db")
+df_final.to_sql("flight_table", conn, if_exists="replace", index=False)
+conn.close()
+print("Data loaded into SQLite: flight_project.db")
+
+class TestFlightProject(unittest.TestCase):
+    def test_logic(self):
+      
+        self.assertEqual(1 if (1200 > 900) else 0, 1)
+
+    def test_db_exists(self):
+  
+        res = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", c)
+        c.close()
+        self.assertIn('flight_table', res.values)
+
+
+unittest.main(argv=[''], exit=False)
+
+df_final
