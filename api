@@ -1,0 +1,13 @@
+
+!pip install FlightRadarAPI pandas scikit-learn
+
+import pandas as pd
+import sqlite3
+import datetime
+import time
+import unittest
+from FlightRadar24.api import FlightRadar24API
+from sklearn.ensemble import RandomForestClassifier
+
+fr_api = FlightRadar24API()
+print("Setup Done")
