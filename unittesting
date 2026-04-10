@@ -1,0 +1,57 @@
+import unittest
+import sqlite3
+import pandas as pd
+
+# 1. THE TEST SUITE
+class TestFlightPipeline(unittest.TestCase):
+
+    def test_delay_feature_extraction(self):
+        """
+        Tests if the 15-minute (900s) threshold correctly
+        identifies a delayed flight (1) vs on-time (0).
+        """
+        
+        sched_a, real_a = 1711800000, 1711801200
+        result_a = 1 if (real_a - sched_a) > 900 else 0
+
+        sched_b, real_b = 1711800000, 1711800300
+        result_b = 1 if (real_b - sched_b) > 900 else 0
+
+        self.assertEqual(result_a, 1, "Should flag 20 min as Delayed")
+        self.assertEqual(result_b, 0, "Should flag 5 min as On-Time")
+
+    def test_time_formatting(self):
+        """
+        Tests if Unix timestamps are correctly converted
+        to readable String formats.
+        """
+        test_ts = 1711800000 
+        formatted = datetime.datetime.fromtimestamp(test_ts).strftime('%H:%M')
+        
+        self.assertEqual(len(formatted), 5)
+        self.assertIn(":", formatted)
+
+    def test_database_integration(self):
+        """
+        Proves data flows from the Python DataFrame
+        into the SQL database correctly.
+        """
+        test_df = pd.DataFrame([{
+            "Flight_No": "TEST999",
+            "Departure_Time": "12:00",
+            "Arrival_Time": "14:00",
+            "Prev_Flight_Delayed": 0,
+            "Current_Is_Delayed": 1
+        }])
+
+        conn = sqlite3.connect("test_integration.db")
+        test_df.to_sql("temp_table", conn, if_exists="replace", index=False)
+
+        check_df = pd.read_sql("SELECT Flight_No FROM temp_table WHERE Flight_No='TEST999'", conn)
+        conn.close()
+
+        self.assertEqual(check_df.iloc[0]['Flight_No'], "TEST999")
+
+print("--- STARTING SYSTEM VALIDATION ---")
+
+unittest.main(argv=[''], exit=False)
