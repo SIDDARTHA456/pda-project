@@ -1,0 +1,42 @@
+def fetch_flight_pipeline(lat=53.28, lon=-6.37, radius=50000):
+    # Get flights in the Dublin sector
+    bounds = fr_api.get_bounds_by_point(lat, lon, radius)
+    flights = fr_api.get_flights(bounds=bounds)
+
+    refined_data = []
+
+    for flight in flights[:15]:
+        try:
+            details = fr_api.get_flight_details(flight)
+
+            sched_dep = details.get('time', {}).get('scheduled', {}).get('departure')
+            real_dep  = details.get('time', {}).get('real', {}).get('departure')
+            sched_arr = details.get('time', {}).get('scheduled', {}).get('arrival')
+
+            is_delayed = 1 if (sched_dep and real_dep and (real_dep - sched_dep) > 900) else 0
+
+            prev_delayed = 0
+            history = details.get('aircraft', {}).get('history', {}).get('flight', [])
+            if len(history) > 1:
+                prev_f = history[1]
+                p_s = prev_f.get('time', {}).get('scheduled', {}).get('departure')
+                p_r = prev_f.get('time', {}).get('real', {}).get('departure')
+                if p_s and p_r:
+                    prev_delayed = 1 if (p_r - p_s) > 900 else 0
+
+            refined_data.append({
+                "Flight_No": flight.number,
+                "Departure_Time": datetime.datetime.fromtimestamp(sched_dep).strftime('%H:%M') if sched_dep else "N/A",
+                "Arrival_Time": datetime.datetime.fromtimestamp(sched_arr).strftime('%H:%M') if sched_arr else "N/A",
+                "Prev_Flight_Delayed": prev_delayed,
+                "Current_Is_Delayed": is_delayed
+            })
+        except:
+            continue
+
+    return pd.DataFrame(refined_data)
+
+# Execute Acquisition
+df_raw = fetch_flight_pipeline()
+print("Data Acquired and Preprocessed.")
+df_raw.head() 
