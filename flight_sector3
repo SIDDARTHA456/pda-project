@@ -1,0 +1,21 @@
+def run_predictions(df):
+    if df.empty or len(df) < 2:
+        return "Not enough data"
+
+    X = df[['Prev_Flight_Delayed']].values
+    y = df['Current_Is_Delayed'].values
+
+    model = RandomForestClassifier(n_estimators=10)
+    model.fit(X, y)
+
+    current_status = df[['Current_Is_Delayed']].values
+    predictions = model.predict(current_status)
+
+    df['Upcoming_Flight_Prediction'] = predictions
+    df['Upcoming_Flight_Prediction'] = df['Upcoming_Flight_Prediction'].map({1: "⚠️ Delayed", 0: "✅ On Time"})
+
+    return df
+
+df_final = run_predictions(df_raw)
+print("Upcoming Flight Predictions Generated.")
+df_final[['Flight_No', 'Current_Is_Delayed', 'Upcoming_Flight_Prediction']]
