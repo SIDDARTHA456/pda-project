@@ -1,5 +1,5 @@
 
-!pip install FlightRadarAPI pandas scikit-learn
+pip install FlightRadarAPI pandas scikit-learn
 
 import pandas as pd
 import sqlite3
